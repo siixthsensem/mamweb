@@ -93,6 +93,10 @@
       card.className = 'card';
       card.href = `product.html?id=${encodeURIComponent(product.id)}`;
       const stock = stockOf(product);
+      if (stock === 0) {
+        card.style.opacity = '.58';
+        card.style.filter = 'grayscale(1)';
+      }
       const visual = product.image ? '<img class="product-photo" alt="">' : `<span class="product-emoji">${product.icon || '🧵'}</span>`;
       card.innerHTML = `<div class="card-img ${product.color || 'beige'}">${stock === 0 ? '<span class="tag">สินค้าหมด</span>' : ''}${visual}</div><h3></h3><small></small><div class="price"></div>${stock === 0 ? '<small class="out-of-stock">สินค้าหมดชั่วคราว</small>' : ''}`;
       if (product.image) {
