@@ -8,7 +8,10 @@
 
   const message = text => { status.textContent = text; };
   const slugFor = name => `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${Date.now()}`;
-  const db = async () => window.supabaseReady;
+  const db = async () => {
+    while (!window.supabaseReady) await new Promise(resolve => setTimeout(resolve, 25));
+    return window.supabaseReady;
+  };
 
   picker.onchange = () => {
     const file = picker.files[0];
@@ -77,5 +80,9 @@
     await catalog.syncStocks();
   };
 
-  Promise.resolve(requireRole('admin')).then(access => { if (access) renderProducts(); });
+  (async () => {
+    await db();
+    const access = await requireRole('admin');
+    if (access) await renderProducts();
+  })();
 }());
