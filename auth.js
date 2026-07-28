@@ -1,7 +1,7 @@
 (function(){
   const status=message=>{const el=document.getElementById('auth-status');if(el)el.textContent=message};
   const client=async()=>window.supabaseReady;
-  async function profileFor(user){const db=await client();const {data}=await db.from('profiles').select('display_name,role').eq('id',user.id).single();return data||{display_name:user.email,role:'customer'}}
+  async function profileFor(user){const db=await client();const {data}=await db.from('profiles').select('display_name,role,avatar_url,phone,address,birth_date').eq('id',user.id).single();return data||{display_name:user.email,role:'customer'}}
   async function redirectUser(user){const profile=await profileFor(user);location.href=profile.role==='admin'?'admin.html':'account.html'}
   window.signOut=async()=>{const db=await client();await db.auth.signOut();location.href='login.html'};
   window.requireRole=async role=>{const db=await client();const {data:{user}}=await db.auth.getUser();if(!user){location.replace('login.html');return null}const profile=await profileFor(user);if(role&&profile.role!==role){location.replace('index.html');return null}return {...user,profile}};
