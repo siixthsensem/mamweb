@@ -63,6 +63,11 @@ window.addEventListener('load', async () => {
   };
 
   const root = document.getElementById('orders');
+  document.getElementById('orders-link').onclick = event => {
+    event.preventDefault();
+    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    history.replaceState(null, '', '#orders');
+  };
   const { data: orders, error } = await db.from('orders')
     .select('id,total,status,created_at,expires_at,tracking_code,shipped_at,order_items(product_name,quantity,unit_price)')
     .order('created_at', { ascending: false });
