@@ -1,27 +1,130 @@
-(function(){
-  const productKey='lamunlai-products',cartKey='lamunlai-cart';
-  const initial=[
-    {id:'tote',name:'กระเป๋าผ้า Everyday Tote',category:'กระเป๋าผ้า',detail:'ผ้าฝ้ายทอมือ · สีดินเผา',description:'กระเป๋าผ้าทอมือทรงเรียบง่ายสำหรับทุกวัน ขนาดกำลังพอดี ใส่โน้ตบุ๊ก 13 นิ้วได้ พร้อมช่องกระเป๋าเล็กด้านใน',price:890,color:'sand',icon:'👜'},
-    {id:'pillow',name:'ปลอกหมอนลายตาราง',category:'ของแต่งบ้าน',detail:'ผ้าฝ้ายธรรมชาติ · Sage green',description:'ปลอกหมอนผ้าฝ้ายธรรมชาติลายตาราง ช่วยเติมความอบอุ่นให้มุมพักผ่อนของคุณ',price:650,color:'green',icon:'🏠'},
-    {id:'bloom',name:'กระเป๋าใส่เครื่องเขียน Bloom',category:'ของชิ้นเล็ก',detail:'ผ้าคอตตอน · ปักมือ',description:'กระเป๋าผ้าคอตตอนใบเล็ก ปักมืออย่างตั้งใจ เหมาะสำหรับเก็บเครื่องเขียนและของใช้ชิ้นโปรด',price:420,color:'beige',icon:'🎀'}
+(function () {
+  const productKey = 'lamunlai-products';
+  const cartKey = 'lamunlai-cart';
+  const colors = ['sand', 'green', 'beige', 'pink'];
+  const initial = [
+    { id: 'tote', name: 'กระเป๋าผ้า Everyday Tote', category: 'กระเป๋าผ้า', detail: 'ผ้าฝ้ายทอมือ · สีดินเผา', description: 'กระเป๋าผ้าทอมือสำหรับทุกวัน', price: 890, stock: 0, color: 'sand', icon: '👜' },
+    { id: 'pillow', name: 'ปลอกหมอนลายตาราง', category: 'ของแต่งบ้าน', detail: 'ผ้าฝ้ายธรรมชาติ · Sage green', description: 'ปลอกหมอนผ้าฝ้ายธรรมชาติ', price: 650, stock: 0, color: 'green', icon: '🏠' },
+    { id: 'bloom', name: 'กระเป๋าใส่เครื่องเขียน Bloom', category: 'ของชิ้นเล็ก', detail: 'ผ้าคอตตอน · ปักมือ', description: 'กระเป๋าผ้าคอตตอนปักมือ', price: 420, stock: 0, color: 'beige', icon: '🎀' }
   ];
-  const load=()=>JSON.parse(localStorage.getItem(productKey)||'null')||initial,save=x=>localStorage.setItem(productKey,JSON.stringify(x));
-  const cart=()=>JSON.parse(localStorage.getItem(cartKey)||'[]');
-  const money=n=>'฿ '+Number(n).toLocaleString('th-TH');
-  const count=()=>cart().reduce((sum,item)=>sum+item.quantity,0);
-  function updateCartCount(){document.querySelectorAll('.count').forEach(el=>el.textContent=count())}
-  function saveCart(items){const products=load(),normalized=items.map(item=>{const product=products.find(candidate=>candidate.id===item.id)||item,stock=stockOf(product),quantity=Math.max(0,Number(item.quantity)||0);return {...product,...item,stock,quantity:Math.min(quantity,stock)}}).filter(item=>item.quantity>0);localStorage.setItem(cartKey,JSON.stringify(normalized));updateCartCount()}
-  function stockOf(product){const stock=Number(product&&product.stock);return Number.isFinite(stock)?Math.max(0,stock):0}
-  function addToCart(product,quantity=1){const currentProduct=load().find(item=>item.id===product.id)||product,items=cart(),existing=items.find(x=>x.id===currentProduct.id),current=existing?existing.quantity:0,available=Math.max(0,stockOf(currentProduct)-current),added=Math.min(Math.max(0,Number(quantity)||0),available);if(added){if(existing)existing.quantity+=added;else items.push({...currentProduct,quantity:added});saveCart(items);updateCartCount()}return {added,available}}
-  async function syncStocks(){if(!window.supabaseReady){setTimeout(syncStocks,250);return}try{const db=await window.supabaseReady,{data,error}=await db.from('products').select('id,slug,name,category,short_description,description,price,image_url,stock,active').eq('active',true).order('name');if(error||!data){console.warn('Unable to refresh products',error);return}const colors=['sand','green','beige','pink'];const products=data.map((product,index)=>({id:product.id,slug:product.slug,name:product.name,category:product.category,detail:product.short_description||'',description:product.description||'',price:Number(product.price)||0,image:product.image_url||'',stock:Math.max(0,Number(product.stock)||0),active:product.active,color:colors[index%colors.length],icon:'🧵'}));save(products);const lookup=new Map(products.map(product=>[product.id,product]));const corrected=cart().map(item=>{const remote=lookup.get(item.id),stock=remote?stockOf(remote):0;return remote?{...remote,quantity:Math.min(item.quantity,stock)}:{...item,stock:0,quantity:0};}).filter(item=>item.quantity>0);saveCart(corrected);return products}catch(error){console.warn('Unable to refresh products',error)}}
-  window.catalog={load,save,money,cart,saveCart,count,addToCart,updateCartCount,stockOf,syncStocks};
-  window.renderCatalog=function(filter='ทั้งหมด'){
-    const target=document.querySelector('#product-list');if(!target)return;const items=load().filter(x=>filter==='ทั้งหมด'||x.category===filter);target.innerHTML='';
-    if(!items.length){target.innerHTML='<p>ยังไม่มีสินค้าในหมวดนี้</p>';return}
-    items.forEach(x=>{const card=document.createElement('a');card.className='card';card.href='product.html?id='+encodeURIComponent(x.id);const visual=x.image?'<img class="product-photo" alt="">':`<span class="product-emoji">${x.icon||'✦'}</span>`;card.innerHTML=`<div class="card-img ${x.color||'beige'}">${visual}</div><h3></h3><small></small><div class="price"></div>`;if(x.image){const image=card.querySelector('img');image.src=x.image;image.alt=x.name}card.querySelector('h3').textContent=x.name;card.querySelector('small').textContent=x.detail;card.querySelector('.price').textContent=money(x.price);target.append(card)});
+
+  const load = () => JSON.parse(localStorage.getItem(productKey) || 'null') || initial;
+  const save = products => localStorage.setItem(productKey, JSON.stringify(products));
+  const cart = () => JSON.parse(localStorage.getItem(cartKey) || '[]');
+  const money = number => `฿ ${Number(number || 0).toLocaleString('th-TH')}`;
+  const stockOf = product => Math.max(0, Number(product?.stock) || 0);
+  const count = () => cart().reduce((total, item) => total + Math.max(0, Number(item.quantity) || 0), 0);
+
+  function updateCartCount() {
+    document.querySelectorAll('.count').forEach(element => { element.textContent = count(); });
+  }
+
+  function saveCart(items) {
+    const products = load();
+    const normalized = items.map(item => {
+      const product = products.find(candidate => candidate.id === item.id) || item;
+      const quantity = Math.min(Math.max(0, Number(item.quantity) || 0), stockOf(product));
+      return { ...product, ...item, stock: stockOf(product), quantity };
+    }).filter(item => item.quantity > 0);
+    localStorage.setItem(cartKey, JSON.stringify(normalized));
+    updateCartCount();
+  }
+
+  function addToCart(product, quantity = 1) {
+    const currentProduct = load().find(item => item.id === product.id) || product;
+    const items = cart();
+    const existing = items.find(item => item.id === currentProduct.id);
+    const current = existing ? Number(existing.quantity) || 0 : 0;
+    const available = Math.max(0, stockOf(currentProduct) - current);
+    const added = Math.min(Math.max(0, Number(quantity) || 0), available);
+    if (added) {
+      if (existing) existing.quantity = current + added;
+      else items.push({ ...currentProduct, quantity: added });
+      saveCart(items);
+    }
+    return { added, available };
+  }
+
+  async function syncStocks() {
+    while (!window.supabaseReady) await new Promise(resolve => setTimeout(resolve, 25));
+    try {
+      const db = await window.supabaseReady;
+      const { data, error } = await db.from('products')
+        .select('id,slug,name,category,short_description,description,price,image_url,stock,active')
+        .eq('active', true)
+        .order('name');
+      if (error || !data) throw error || new Error('ไม่พบข้อมูลสินค้า');
+      const products = data.map((product, index) => ({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        category: product.category,
+        detail: product.short_description || '',
+        description: product.description || '',
+        price: Number(product.price) || 0,
+        image: product.image_url || '',
+        stock: stockOf(product),
+        active: product.active,
+        color: colors[index % colors.length],
+        icon: '🧵'
+      }));
+      save(products);
+      saveCart(cart());
+      return products;
+    } catch (error) {
+      console.warn('Unable to refresh products', error);
+      return load();
+    }
+  }
+
+  window.catalog = { load, save, money, cart, saveCart, count, addToCart, updateCartCount, stockOf, syncStocks };
+
+  window.renderCatalog = function (filter = 'ทั้งหมด') {
+    const target = document.querySelector('#product-list');
+    if (!target) return;
+    const products = load().filter(product => filter === 'ทั้งหมด' || product.category === filter);
+    target.innerHTML = '';
+    if (!products.length) {
+      target.innerHTML = '<p>ยังไม่มีสินค้าในหมวดนี้</p>';
+      return;
+    }
+    products.forEach(product => {
+      const card = document.createElement('a');
+      card.className = 'card';
+      card.href = `product.html?id=${encodeURIComponent(product.id)}`;
+      const stock = stockOf(product);
+      const visual = product.image ? '<img class="product-photo" alt="">' : `<span class="product-emoji">${product.icon || '🧵'}</span>`;
+      card.innerHTML = `<div class="card-img ${product.color || 'beige'}">${stock === 0 ? '<span class="tag">สินค้าหมด</span>' : ''}${visual}</div><h3></h3><small></small><div class="price"></div>${stock === 0 ? '<small class="out-of-stock">สินค้าหมดชั่วคราว</small>' : ''}`;
+      if (product.image) {
+        const image = card.querySelector('img');
+        image.src = product.image;
+        image.alt = product.name;
+      }
+      card.querySelector('h3').textContent = product.name;
+      card.querySelector('small').textContent = product.detail;
+      card.querySelector('.price').textContent = money(product.price);
+      target.append(card);
+    });
   };
+
   updateCartCount();
-  addEventListener('storage',event=>{if(event.key===cartKey)updateCartCount()});
-  addEventListener('load',()=>{updateCartCount();syncStocks().then(()=>{if(typeof window.renderCatalog==='function')window.renderCatalog();if(typeof window.renderCart==='function')window.renderCart()})});
-  document.addEventListener('click',event=>{const button=event.target;if(button.id==='add-button'){event.preventDefault();event.stopImmediatePropagation();const id=new URLSearchParams(location.search).get('id'),product=load().find(item=>item.id===id),quantity=Number(document.getElementById('quantity')?.textContent)||1,result=product?addToCart(product,quantity):{added:0};const message=document.getElementById('add-message');if(message)message.textContent=result.added===quantity?'เพิ่มสินค้าในตะกร้าแล้ว ✓':'เพิ่มได้ตามจำนวนสต๊อกที่เหลือเท่านั้น';const quantityEl=document.getElementById('quantity');if(quantityEl)quantityEl.textContent='1';return}if(button.closest('.detail .qty')&&button.textContent.trim()==='+'){const id=new URLSearchParams(location.search).get('id'),product=load().find(item=>item.id===id),quantityEl=document.getElementById('quantity');if(product&&quantityEl&&Number(quantityEl.textContent)>=stockOf(product)){event.preventDefault();event.stopImmediatePropagation();const message=document.getElementById('add-message');if(message)message.textContent='สินค้าในสต๊อกมีจำนวนเท่านี้';}}},true);
-})();
+  addEventListener('storage', event => { if (event.key === cartKey) updateCartCount(); });
+  addEventListener('load', () => {
+    updateCartCount();
+    syncStocks().then(() => {
+      if (typeof window.renderCatalog === 'function') window.renderCatalog();
+      if (typeof window.renderCart === 'function') window.renderCart();
+    });
+  });
+  document.addEventListener('click', event => {
+    const button = event.target;
+    if (button.id !== 'add-button') return;
+    event.preventDefault();
+    const id = new URLSearchParams(location.search).get('id');
+    const product = load().find(item => item.id === id);
+    const quantity = Number(document.getElementById('quantity')?.textContent) || 1;
+    const result = product ? addToCart(product, quantity) : { added: 0 };
+    const message = document.getElementById('add-message');
+    if (message) message.textContent = result.added === quantity ? 'เพิ่มสินค้าในตะกร้าแล้ว ✓' : 'สินค้าหมดหรือมีจำนวนในตะกร้าครบตามสต๊อกแล้ว';
+  }, true);
+}());

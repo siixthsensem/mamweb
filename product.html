@@ -1,1 +1,36 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>รายละเอียดสินค้า | ละมุนลายผ้า</title><link rel="stylesheet" href="site.css?v=5"></head><body><div class="topline">ส่งฟรีทั่วประเทศ เมื่อสั่งซื้อครบ 1,500 บาท</div><header><a class="logo" href="index.html"><i></i>ละมุนลายผ้า</a><nav><a class="active" href="products.html">สินค้า</a><a href="about.html">เรื่องราวของเรา</a><a href="custom-order.html">สั่งทำพิเศษ</a><a href="contact.html">ติดต่อเรา</a></nav><div class="actions"><a class="cart" href="cart.html">🛍<b class="count">0</b></a><a class="auth-chip" data-auth-menu href="login.html">เข้าสู่ระบบ</a></div></header><main class="content"><div class="wrap"><div class="crumb"><a href="index.html">หน้าแรก</a> / <a href="products.html">สินค้า</a> / <span id="crumb-name">รายละเอียดสินค้า</span></div><section class="product-detail"><div class="detail-art" id="detail-art"></div><div class="detail"><span class="eyebrow" id="product-category">handcrafted item</span><h1 id="product-name"></h1><div class="price" id="product-price"></div><p id="product-description"></p><b>จำนวน</b><div class="qty"><button onclick="change(-1)">−</button><span id="quantity">1</span><button onclick="change(1)">+</button></div><button class="btn full" id="add-button">เพิ่มลงตะกร้า</button><p id="add-message" style="text-align:center;color:#526d62;font-size:13px"></p><div class="info">✦ เย็บด้วยมือโดยช่างฝีมือในไทย<br>✦ คัดสรรวัสดุอย่างใส่ใจ<br>✦ จัดส่งภายใน 2–4 วันทำการ</div></div></section></div></main><footer><div class="foot"><div><a class="logo" href="index.html"><i></i>ละมุนลายผ้า</a><p>งานผ้าที่สร้างด้วยมือ ความรัก และความตั้งใจ</p></div><div class="social"><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">Line</a></div></div></footer><script src="catalog.js?v=2"></script><script>const id=new URLSearchParams(location.search).get('id'),fallback=catalog.load()[0],p=catalog.load().find(x=>x.id===id)||fallback;document.title=p.name+' | ละมุนลายผ้า';document.getElementById('crumb-name').textContent=p.name;document.getElementById('product-category').textContent=p.category;document.getElementById('product-name').textContent=p.name;document.getElementById('product-price').textContent=catalog.money(p.price);document.getElementById('product-description').textContent=p.description||p.detail;const art=document.getElementById('detail-art');art.classList.add(p.color||'beige');if(p.image){const img=document.createElement('img');img.className='product-photo';img.src=p.image;img.alt=p.name;art.append(img)}else{const icon=document.createElement('span');icon.className='product-emoji';icon.textContent=p.icon||'✦';art.append(icon)}let q=1;function change(n){q=Math.max(1,q+n);document.getElementById('quantity').textContent=q}document.getElementById('add-button').onclick=()=>{catalog.addToCart(p,q);document.getElementById('add-message').textContent='เพิ่มสินค้าในตะกร้าแล้ว ✓';q=1;document.getElementById('quantity').textContent=q}</script><script src="supabase-config.js"></script><script type="module" src="supabase-client.js"></script><script src="auth-menu.js?v=3"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>รายละเอียดสินค้า | ละมุนลายผ้า</title><link rel="stylesheet" href="site.css?v=5"></head>
+<body>
+  <div class="topline">ส่งฟรีทั่วประเทศ เมื่อสั่งซื้อครบ 1,500 บาท</div>
+  <header><a class="logo" href="index.html"><i></i>ละมุนลายผ้า</a><nav><a class="active" href="products.html">สินค้า</a><a href="about.html">เรื่องราวของเรา</a><a href="custom-order.html">สั่งทำพิเศษ</a><a href="contact.html">ติดต่อเรา</a></nav><div class="actions"><a class="cart" href="cart.html">🛍<b class="count">0</b></a><a class="auth-chip" data-auth-menu href="login.html">เข้าสู่ระบบ</a></div></header>
+  <main class="content"><div class="wrap"><div class="crumb"><a href="index.html">หน้าแรก</a> / <a href="products.html">สินค้า</a> / <span id="crumb-name">รายละเอียดสินค้า</span></div><section class="product-detail"><div class="detail-art" id="detail-art"></div><div class="detail"><span class="eyebrow" id="product-category">handcrafted item</span><h1 id="product-name"></h1><div class="price" id="product-price"></div><p id="product-description"></p><p id="stock-note" class="out-of-stock"></p><div id="purchase-controls"><b>จำนวน</b><div class="qty"><button id="decrease" type="button">−</button><span id="quantity">1</span><button id="increase" type="button">+</button></div><button class="btn full" id="add-button">เพิ่มลงตะกร้า</button></div><p id="add-message" style="text-align:center;color:#526d62;font-size:13px"></p><div class="info">✦ เย็บด้วยมือโดยช่างฝีมือในไทย<br>✦ คัดสรรวัสดุอย่างใส่ใจ<br>✦ จัดส่งภายใน 2–4 วันทำการ</div></div></section></div></main>
+  <footer><div class="foot"><div><a class="logo" href="index.html"><i></i>ละมุนลายผ้า</a><p>งานผ้าที่สร้างด้วยมือ ความรัก และความตั้งใจ</p></div><div class="social"><a href="#">Instagram</a><a href="#">Facebook</a><a href="#">Line</a></div></div></footer>
+  <script src="supabase-config.js"></script><script type="module" src="supabase-client.js"></script><script src="catalog.js?v=4"></script>
+  <script>
+    const id = new URLSearchParams(location.search).get('id');
+    let product;
+    function showProduct() {
+      product = catalog.load().find(item => item.id === id) || catalog.load()[0];
+      if (!product) return;
+      const stock = catalog.stockOf(product);
+      document.title = product.name + ' | ละมุนลายผ้า';
+      document.getElementById('crumb-name').textContent = product.name;
+      document.getElementById('product-category').textContent = product.category;
+      document.getElementById('product-name').textContent = product.name;
+      document.getElementById('product-price').textContent = catalog.money(product.price);
+      document.getElementById('product-description').textContent = product.description || product.detail;
+      const art = document.getElementById('detail-art'); art.className = `detail-art ${product.color || 'beige'}`; art.innerHTML = '';
+      if (product.image) { const image = document.createElement('img'); image.className = 'product-photo'; image.src = product.image; image.alt = product.name; art.append(image); }
+      else { const icon = document.createElement('span'); icon.className = 'product-emoji'; icon.textContent = product.icon || '🧵'; art.append(icon); }
+      document.getElementById('stock-note').textContent = stock === 0 ? 'สินค้าหมดชั่วคราว' : `เหลือ ${stock} ชิ้น`;
+      document.getElementById('purchase-controls').style.display = stock === 0 ? 'none' : 'block';
+    }
+    function change(amount) { const next = Math.max(1, Math.min(catalog.stockOf(product), (Number(document.getElementById('quantity').textContent) || 1) + amount)); document.getElementById('quantity').textContent = next; }
+    document.getElementById('decrease').onclick = () => change(-1);
+    document.getElementById('increase').onclick = () => change(1);
+    showProduct();
+    addEventListener('load', () => setTimeout(showProduct, 100));
+  </script><script src="auth-menu.js?v=3"></script>
+</body>
+</html>

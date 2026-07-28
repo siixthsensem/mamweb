@@ -39,6 +39,38 @@
       row.className = 'order';
       const info = document.createElement('span');
       info.textContent = `${product.name} · ฿${Number(product.price).toLocaleString('th-TH')} · คงเหลือ ${product.stock || 0} ชิ้น${product.active ? '' : ' (ปิดการขาย)'}`;
+      const actions = document.createElement('div');
+      const stockInput = document.createElement('input');
+      stockInput.type = 'number';
+      stockInput.min = '0';
+      stockInput.value = String(product.stock || 0);
+      stockInput.setAttribute('aria-label', `สต๊อก ${product.name}`);
+      stockInput.style.cssText = 'width:76px;padding:6px;margin-right:6px;border:1px solid #d9d4c9;border-radius:8px';
+      const saveStock = document.createElement('button');
+      saveStock.className = 'filter';
+      saveStock.textContent = 'บันทึกสต๊อก';
+      saveStock.onclick = async () => {
+        const stock = Number(stockInput.value);
+        if (!Number.isInteger(stock) || stock < 0) { message('กรุณาระบุจำนวนสต๊อกตั้งแต่ 0 ขึ้นไป'); return; }
+        saveStock.disabled = true;
+        const { error: stockError } = await client.from('products').update({ stock }).eq('id', product.id);
+        if (stockError) { message(stockError.message); saveStock.disabled = false; return; }
+        message(stock === 0 ? 'บันทึกแล้ว: สินค้าหมดชั่วคราว' : `บันทึกสต๊อก ${stock} ชิ้นแล้ว`);
+        await renderProducts();
+        await catalog.syncStocks();
+      };
+      const toggleActive = document.createElement('button');
+      toggleActive.className = 'filter';
+      toggleActive.textContent = product.active ? 'ปิดการขาย' : 'เปิดขาย';
+      toggleActive.onclick = async () => {
+        toggleActive.disabled = true;
+        const { error: activeError } = await client.from('products').update({ active: !product.active }).eq('id', product.id);
+        if (activeError) { message(activeError.message); toggleActive.disabled = false; return; }
+        message(product.active ? 'ปิดการขายแล้ว' : 'เปิดขายแล้ว');
+        await renderProducts();
+        await catalog.syncStocks();
+      };
+      actions.append(stockInput, saveStock, toggleActive);
       const remove = document.createElement('button');
       remove.className = 'filter';
       remove.textContent = 'ลบ';
@@ -51,7 +83,8 @@
         await renderProducts();
         await catalog.syncStocks();
       };
-      row.append(info, remove);
+      actions.append(remove);
+      row.append(info, actions);
       root.append(row);
     });
   }
