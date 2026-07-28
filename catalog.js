@@ -10,9 +10,11 @@
   const money=n=>'฿ '+Number(n).toLocaleString('th-TH');
   const count=()=>cart().reduce((sum,item)=>sum+item.quantity,0);
   function updateCartCount(){document.querySelectorAll('.count').forEach(el=>el.textContent=count())}
-  function saveCart(items){localStorage.setItem(cartKey,JSON.stringify(items));updateCartCount()}
-  function addToCart(product,quantity=1){const items=cart(),existing=items.find(x=>x.id===product.id);if(existing)existing.quantity+=quantity;else items.push({...product,quantity});saveCart(items);updateCartCount()}
-  window.catalog={load,save,money,cart,saveCart,count,addToCart,updateCartCount};
+  function saveCart(items){const normalized=items.map(item=>{const stock=Number(item.stock),quantity=Math.max(0,Number(item.quantity)||0);return {...item,quantity:Number.isFinite(stock)?Math.min(quantity,Math.max(0,stock)):quantity}}).filter(item=>item.quantity>0);localStorage.setItem(cartKey,JSON.stringify(normalized));updateCartCount()}
+  function stockOf(product){const stock=Number(product&&product.stock);return Number.isFinite(stock)?Math.max(0,stock):0}
+  function addToCart(product,quantity=1){const currentProduct=load().find(item=>item.id===product.id)||product,items=cart(),existing=items.find(x=>x.id===currentProduct.id),current=existing?existing.quantity:0,available=Math.max(0,stockOf(currentProduct)-current),added=Math.min(Math.max(0,Number(quantity)||0),available);if(added){if(existing)existing.quantity+=added;else items.push({...currentProduct,quantity:added});saveCart(items);updateCartCount()}return {added,available}}
+  async function syncStocks(){if(!window.supabaseReady)return;try{const db=await window.supabaseReady,{data,error}=await db.from('products').select('id,slug,stock,active');if(error||!data)return;const lookup=new Map;data.forEach(x=>{lookup.set(x.id,x);if(x.slug)lookup.set(x.slug,x)});const products=load().map(product=>{const remote=lookup.get(product.id);return remote?{...product,stock:Number(remote.stock)||0,active:remote.active}:product});save(products);const corrected=cart().map(item=>{const remote=lookup.get(item.id),stock=remote?(remote.active?Number(remote.stock)||0:0):stockOf(item);return {...item,stock,quantity:Math.min(item.quantity,stock)};}).filter(item=>item.quantity>0);saveCart(corrected);return products}catch(error){console.warn('Unable to refresh stock',error)}}
+  window.catalog={load,save,money,cart,saveCart,count,addToCart,updateCartCount,stockOf,syncStocks};
   window.renderCatalog=function(filter='ทั้งหมด'){
     const target=document.querySelector('#product-list');if(!target)return;const items=load().filter(x=>filter==='ทั้งหมด'||x.category===filter);target.innerHTML='';
     if(!items.length){target.innerHTML='<p>ยังไม่มีสินค้าในหมวดนี้</p>';return}
@@ -20,5 +22,6 @@
   };
   updateCartCount();
   addEventListener('storage',event=>{if(event.key===cartKey)updateCartCount()});
-  addEventListener('load',updateCartCount);
+  addEventListener('load',()=>{updateCartCount();syncStocks().then(()=>{if(typeof window.renderCart==='function')window.renderCart()})});
+  document.addEventListener('click',event=>{const button=event.target;if(button.id==='add-button'){event.preventDefault();event.stopImmediatePropagation();const id=new URLSearchParams(location.search).get('id'),product=load().find(item=>item.id===id),quantity=Number(document.getElementById('quantity')?.textContent)||1,result=product?addToCart(product,quantity):{added:0};const message=document.getElementById('add-message');if(message)message.textContent=result.added===quantity?'เพิ่มสินค้าในตะกร้าแล้ว ✓':'เพิ่มได้ตามจำนวนสต๊อกที่เหลือเท่านั้น';const quantityEl=document.getElementById('quantity');if(quantityEl)quantityEl.textContent='1';return}if(button.closest('.detail .qty')&&button.textContent.trim()==='+'){const id=new URLSearchParams(location.search).get('id'),product=load().find(item=>item.id===id),quantityEl=document.getElementById('quantity');if(product&&quantityEl&&Number(quantityEl.textContent)>=stockOf(product)){event.preventDefault();event.stopImmediatePropagation();const message=document.getElementById('add-message');if(message)message.textContent='สินค้าในสต๊อกมีจำนวนเท่านี้';}}},true);
 })();
