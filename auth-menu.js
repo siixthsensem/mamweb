@@ -1,5 +1,12 @@
 (async()=>{
   try {
+    for(let attempt=0;attempt<50&&!window.supabaseReady;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    if(!window.supabaseReady){
+      console.warn('Auth menu unavailable: Supabase did not load');
+      return;
+    }
     const db=await window.supabaseReady;
     const {data:{user}}=await db.auth.getUser();
     const slot=document.querySelector('.actions')||document.querySelector('header');
