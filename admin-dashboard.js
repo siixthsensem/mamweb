@@ -8,6 +8,54 @@ window.addEventListener('load', async () => {
   const money = value => catalog.money(value);
   const orderCode = id => 'LM-' + String(id).slice(0, 8).toUpperCase();
 
+  function requestTrackingCode(code) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(31,42,36,.5);display:grid;place-items:center;padding:20px;z-index:1000';
+      const dialog = document.createElement('form');
+      dialog.style.cssText = 'width:min(100%,440px);background:#fffaf2;border-radius:16px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.2)';
+      const title = document.createElement('h2');
+      const text = document.createElement('p');
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      const hint = document.createElement('small');
+      const actions = document.createElement('div');
+      const cancel = document.createElement('button');
+      const confirm = document.createElement('button');
+      title.textContent = 'ยืนยันการจัดส่ง';
+      text.textContent = `คำสั่งซื้อ ${code}`;
+      label.textContent = 'รหัสติดตามพัสดุไปรษณีย์ไทย';
+      input.required = true;
+      input.autocomplete = 'off';
+      input.placeholder = 'เช่น EX123456789TH หรือ 1234567890';
+      input.style.cssText = 'width:100%;box-sizing:border-box;margin-top:8px;padding:12px;border:1px solid #c8bba8;border-radius:8px;font-size:16px;text-transform:uppercase';
+      hint.textContent = 'กรอกรหัสพัสดุให้ครบก่อนกดยืนยัน';
+      hint.style.display = 'block';
+      hint.style.marginTop = '8px';
+      actions.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:22px';
+      cancel.type = 'button';
+      cancel.className = 'filter';
+      cancel.textContent = 'ยกเลิก';
+      confirm.type = 'submit';
+      confirm.className = 'btn';
+      confirm.textContent = 'ยืนยันจัดส่ง';
+      actions.append(cancel, confirm);
+      dialog.append(title, text, label, input, hint, actions);
+      overlay.append(dialog);
+      document.body.append(overlay);
+      input.focus();
+      const close = value => { overlay.remove(); resolve(value); };
+      cancel.onclick = () => close(null);
+      overlay.onclick = event => { if (event.target === overlay) close(null); };
+      dialog.onsubmit = event => {
+        event.preventDefault();
+        const value = input.value.trim().toUpperCase();
+        if (!value) { input.focus(); return; }
+        close(value);
+      };
+    });
+  }
+
   async function refreshStats() {
     const [orders, messages, items, products] = await Promise.all([
       db.from('orders').select('*', { count: 'exact', head: true }),
@@ -73,10 +121,10 @@ window.addEventListener('load', async () => {
       button.className = 'btn';
       button.textContent = 'ยืนยันจัดส่ง';
       button.onclick = async () => {
-        const tracking = prompt('กรอกรหัสติดตามพัสดุ (จำเป็น)');
-        if (!tracking || !tracking.trim()) { alert('ต้องกรอกรหัสติดตามพัสดุก่อนยืนยันจัดส่ง'); return; }
+        const tracking = await requestTrackingCode(orderCode(order.id));
+        if (!tracking) return;
         button.disabled = true;
-        const { error: shipError } = await db.rpc('mark_order_shipped', { p_order_id: order.id, p_tracking_code: tracking.trim() });
+        const { error: shipError } = await db.rpc('mark_order_shipped', { p_order_id: order.id, p_tracking_code: tracking });
         if (shipError) { alert(shipError.message); button.disabled = false; return; }
         await Promise.all([loadShipments(), refreshStats()]);
       };
