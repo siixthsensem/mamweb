@@ -2,7 +2,8 @@
 name: Deploy static content to Pages
 
 on:
-  # Deployment is paused while bugs are being fixed. Run manually from Actions when ready.
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
