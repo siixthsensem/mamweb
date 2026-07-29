@@ -1,6 +1,13 @@
 (async()=>{
   try {
     document.querySelectorAll('a[href="custom-order.html"]').forEach(link => link.remove());
+    const nav = document.querySelector('header nav');
+    if (nav && !nav.querySelector('a[href="guide.html"]')) {
+      const guide = document.createElement('a');
+      guide.href = 'guide.html';
+      guide.textContent = 'คู่มือใช้งาน';
+      nav.append(guide);
+    }
     document.querySelectorAll('option').forEach(option => {
       if (option.textContent.trim() === 'สั่งทำพิเศษ') option.remove();
     });
