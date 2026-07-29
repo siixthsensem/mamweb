@@ -198,7 +198,7 @@
 
   async function renderProducts() {
     const client = await db();
-    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url,product_media(id)').order('name');
+    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url,is_featured,featured_order,product_media(id)').order('name');
     if (error) { root.innerHTML = '<p>ไม่สามารถโหลดสินค้าได้</p>'; message(error.message); return; }
     root.innerHTML = '';
     if (!data.length) { root.innerHTML = '<p>ยังไม่มีสินค้าในฐานข้อมูล</p>'; return; }
@@ -232,10 +232,37 @@
       toggleActive.className = 'filter'; toggleActive.textContent = product.active ? 'ปิดการขาย' : 'เปิดขาย';
       toggleActive.onclick = async () => {
         toggleActive.disabled = true;
-        const { error: activeError } = await client.from('products').update({ active: !product.active }).eq('id', product.id);
+        const activeUpdate = product.active
+          ? { active: false, is_featured: false, featured_order: null }
+          : { active: true };
+        const { error: activeError } = await client.from('products').update(activeUpdate).eq('id', product.id);
         if (activeError) { message(activeError.message); toggleActive.disabled = false; return; }
         message(product.active ? 'ปิดการขายแล้ว' : 'เปิดขายแล้ว');
         await renderProducts(); await catalog.syncStocks();
+      };
+      const toggleFeatured = document.createElement('button');
+      toggleFeatured.className = 'filter';
+      toggleFeatured.textContent = product.is_featured ? 'นำออกจากแนะนำ' : 'เลือกเป็นสินค้าแนะนำ';
+      toggleFeatured.disabled = !product.active;
+      toggleFeatured.title = product.active ? '' : 'เปิดขายสินค้านี้ก่อนจึงจะเลือกเป็นสินค้าแนะนำได้';
+      toggleFeatured.onclick = async () => {
+        toggleFeatured.disabled = true;
+        try {
+          if (product.is_featured) {
+            const { error: updateError } = await client.from('products').update({ is_featured: false, featured_order: null }).eq('id', product.id);
+            if (updateError) throw updateError;
+            message('นำสินค้าออกจากชิ้นงานแนะนำแล้ว');
+          } else {
+            const { data: featured, error: featuredError } = await client.from('products').select('id,featured_order').eq('is_featured', true).order('featured_order');
+            if (featuredError) throw featuredError;
+            if ((featured || []).length >= 3) { message('เลือกชิ้นงานแนะนำได้สูงสุด 3 ชิ้น กรุณานำรายการเดิมออกก่อน'); toggleFeatured.disabled = false; return; }
+            const nextOrder = (featured || []).reduce((max, item) => Math.max(max, Number(item.featured_order) || 0), 0) + 1;
+            const { error: updateError } = await client.from('products').update({ is_featured: true, featured_order: nextOrder }).eq('id', product.id);
+            if (updateError) throw updateError;
+            message(`เลือกสินค้าแนะนำแล้ว (${(featured || []).length + 1}/3)`);
+          }
+          await renderProducts();
+        } catch (error) { message(error.message || 'ไม่สามารถอัปเดตสินค้าแนะนำได้'); toggleFeatured.disabled = false; }
       };
       const addMedia = document.createElement('button');
       addMedia.className = 'filter'; addMedia.textContent = 'เพิ่มรูป/วิดีโอ';
@@ -271,7 +298,7 @@
           message('ลบสินค้าแล้ว'); await renderProducts(); await catalog.syncStocks();
         } catch (error) { message(error.message); remove.disabled = false; }
       };
-      actions.append(stockInput, saveStock, toggleActive, addMedia, manageMedia, mediaInput, remove);
+      actions.append(stockInput, saveStock, toggleActive, toggleFeatured, addMedia, manageMedia, mediaInput, remove);
       row.append(infoBlock, actions); root.append(row);
     });
   }
