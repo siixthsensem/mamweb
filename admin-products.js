@@ -198,21 +198,38 @@
 
   async function renderProducts() {
     const client = await db();
-    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url,is_featured,featured_order,product_media(id)').order('name');
+    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url,is_featured,featured_order,product_media(id,media_type,media_url,is_cover,display_order)').order('name');
     if (error) { root.innerHTML = '<p>ไม่สามารถโหลดสินค้าได้</p>'; message(error.message); return; }
     root.innerHTML = '';
     if (!data.length) { root.innerHTML = '<p>ยังไม่มีสินค้าในฐานข้อมูล</p>'; return; }
     data.forEach(product => {
       const row = document.createElement('div');
-      row.className = 'order';
+      row.className = 'order admin-product-card';
       const info = document.createElement('span');
       info.textContent = `${product.name} · ฿${Number(product.price).toLocaleString('th-TH')} · คงเหลือ ${product.stock || 0} ชิ้น${product.active ? '' : ' (ปิดการขาย)'}`;
       const count = document.createElement('small');
       count.className = 'product-media-count';
       count.textContent = `สื่อสินค้า ${mediaCount(product)} ไฟล์${mediaCount(product) ? '' : ' (ยังไม่มีรูปหรือวิดีโอ)'}`;
       const infoBlock = document.createElement('div');
-      infoBlock.append(info, count);
+      infoBlock.className = 'admin-product-summary';
+      const thumb = document.createElement('div');
+      thumb.className = 'admin-product-thumb';
+      const cover = (product.product_media || []).find(item => item.media_type === 'image' && item.is_cover)
+        || (product.product_media || []).find(item => item.media_type === 'image');
+      if (cover) { const image = document.createElement('img'); image.src = cover.media_url; image.alt = product.name; thumb.append(image); }
+      else { const icon = document.createElement('span'); icon.textContent = '🧵'; thumb.append(icon); }
+      const copy = document.createElement('div');
+      copy.className = 'admin-product-copy';
+      const title = document.createElement('h3'); title.textContent = product.name;
+      const meta = document.createElement('p'); meta.textContent = `฿${Number(product.price).toLocaleString('th-TH')} · คงเหลือ ${product.stock || 0} ชิ้น`;
+      const badges = document.createElement('div'); badges.className = 'admin-badges';
+      const salesBadge = document.createElement('span'); salesBadge.className = `admin-badge${product.active ? '' : ' warn'}`; salesBadge.textContent = product.active ? 'เปิดขาย' : 'ปิดการขาย';
+      badges.append(salesBadge);
+      if (product.is_featured) { const featuredBadge = document.createElement('span'); featuredBadge.className = 'admin-badge'; featuredBadge.textContent = '★ สินค้าแนะนำ'; badges.append(featuredBadge); }
+      copy.append(title, meta, badges, count);
+      infoBlock.append(thumb, copy);
       const actions = document.createElement('div');
+      actions.className = 'admin-product-actions';
       const stockInput = document.createElement('input');
       stockInput.type = 'number'; stockInput.min = '0'; stockInput.value = String(product.stock || 0);
       stockInput.setAttribute('aria-label', `สต๊อก ${product.name}`);
@@ -298,7 +315,20 @@
           message('ลบสินค้าแล้ว'); await renderProducts(); await catalog.syncStocks();
         } catch (error) { message(error.message); remove.disabled = false; }
       };
-      actions.append(stockInput, saveStock, toggleActive, toggleFeatured, addMedia, manageMedia, mediaInput, remove);
+      const stockRow = document.createElement('div');
+      stockRow.className = 'admin-stock-row';
+      const stockLabel = document.createElement('label'); stockLabel.textContent = 'สต๊อก';
+      stockRow.append(stockLabel, stockInput, saveStock);
+      const mainActions = document.createElement('div');
+      mainActions.className = 'admin-main-actions';
+      mainActions.append(manageMedia, toggleFeatured);
+      const more = document.createElement('details');
+      more.className = 'product-more';
+      const moreSummary = document.createElement('summary'); moreSummary.textContent = '⋯ เพิ่มเติม';
+      const moreMenu = document.createElement('div'); moreMenu.className = 'product-more-menu';
+      moreMenu.append(addMedia, toggleActive, remove);
+      more.append(moreSummary, moreMenu);
+      actions.append(stockRow, mainActions, more, mediaInput);
       row.append(infoBlock, actions); root.append(row);
     });
   }
