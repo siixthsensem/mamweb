@@ -63,6 +63,14 @@
         .eq('active', true)
         .order('name');
       if (error || !data) throw error || new Error('ไม่พบข้อมูลสินค้า');
+      const { data: media, error: mediaError } = await db.from('product_media')
+        .select('product_id,media_type,media_url,display_order,is_cover')
+        .eq('media_type', 'image')
+        .order('display_order');
+      if (mediaError) console.warn('Unable to load product media', mediaError);
+      const coverByProduct = new Map();
+      (media || []).sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.display_order - b.display_order)
+        .forEach(item => { if (!coverByProduct.has(item.product_id)) coverByProduct.set(item.product_id, item.media_url); });
       const products = data.map((product, index) => ({
         id: product.id,
         slug: product.slug,
@@ -71,7 +79,7 @@
         detail: product.short_description || '',
         description: product.description || '',
         price: Number(product.price) || 0,
-        image: product.image_url || '',
+        image: coverByProduct.get(product.id) || product.image_url || '',
         stock: stockOf(product),
         active: product.active,
         color: colors[index % colors.length],

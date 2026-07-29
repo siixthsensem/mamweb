@@ -52,8 +52,16 @@
         .order('name')
         .limit(3);
       if (error) throw error;
+      const { data: media, error: mediaError } = await db.from('product_media')
+        .select('product_id,media_type,media_url,display_order,is_cover')
+        .eq('media_type', 'image')
+        .order('display_order');
+      if (mediaError) console.warn('Unable to load product media', mediaError);
+      const coverByProduct = new Map();
+      (media || []).sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.display_order - b.display_order)
+        .forEach(item => { if (!coverByProduct.has(item.product_id)) coverByProduct.set(item.product_id, item.media_url); });
       grid.innerHTML = '';
-      data.forEach((product, index) => grid.append(makeProductCard(product, index)));
+      data.forEach((product, index) => grid.append(makeProductCard({ ...product, image_url: coverByProduct.get(product.id) || product.image_url }, index)));
     } catch (error) {
       console.warn('Unable to load home products', error);
     }

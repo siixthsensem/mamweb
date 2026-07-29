@@ -1,11 +1,10 @@
 (function () {
-  document.querySelectorAll('a[href="admin-custom-orders.html"]').forEach(link => link.remove());
   const form = document.getElementById('add-product');
-  const picker = form.elements.image;
-  const preview = document.getElementById('image-preview');
+  const picker = form.elements.media;
+  const preview = document.getElementById('media-preview');
   const root = document.getElementById('admin-product-list');
   const status = document.getElementById('product-status');
-  let imageData = '';
+  let mediaFiles = [];
 
   const message = text => { status.textContent = text; };
   const slugFor = name => `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${Date.now()}`;
@@ -13,25 +12,82 @@
     while (!window.supabaseReady) await new Promise(resolve => setTimeout(resolve, 25));
     return window.supabaseReady;
   };
+  const isVideo = file => file.type.startsWith('video/');
+  const fileIsAllowed = file => file.type.startsWith('image/') || ['video/mp4', 'video/webm'].includes(file.type);
+
+  function showPreviews() {
+    preview.innerHTML = '';
+    mediaFiles.forEach(file => {
+      const figure = document.createElement('figure');
+      const url = URL.createObjectURL(file);
+      const element = document.createElement(isVideo(file) ? 'video' : 'img');
+      element.src = url;
+      if (isVideo(file)) { element.muted = true; element.controls = true; }
+      else element.alt = file.name;
+      const caption = document.createElement('figcaption');
+      caption.textContent = `${isVideo(file) ? 'วิดีโอ' : 'รูป'}: ${file.name}`;
+      figure.append(element, caption);
+      preview.append(figure);
+    });
+  }
 
   picker.onchange = () => {
-    const file = picker.files[0];
-    imageData = '';
-    preview.removeAttribute('src');
-    if (!file) return;
-    if (file.size > 1024 * 1024) {
+    const selected = Array.from(picker.files || []);
+    const invalid = selected.find(file => !fileIsAllowed(file) || (!isVideo(file) && file.size > 3 * 1024 * 1024) || (isVideo(file) && file.size > 30 * 1024 * 1024));
+    if (invalid) {
       picker.value = '';
-      message('กรุณาเลือกรูปขนาดไม่เกิน 1 MB');
+      mediaFiles = [];
+      showPreviews();
+      message('รองรับรูปภาพไม่เกิน 3 MB และวิดีโอ MP4/WebM ไม่เกิน 30 MB ต่อไฟล์');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => { imageData = reader.result; preview.src = imageData; };
-    reader.readAsDataURL(file);
+    mediaFiles = selected;
+    showPreviews();
+    message(selected.length ? `เลือกสื่อแล้ว ${selected.length} ไฟล์ — รูปแรกจะเป็นรูปหน้าปกสินค้า` : '');
   };
+
+  async function uploadMedia(client, productId) {
+    const rows = [];
+    let hasCover = false;
+    for (let index = 0; index < mediaFiles.length; index += 1) {
+      const file = mediaFiles[index];
+      const type = isVideo(file) ? 'video' : 'image';
+      const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+      const path = `products/${productId}/${crypto.randomUUID()}-${safeName}`;
+      const { error: uploadError } = await client.storage.from('product-media').upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: publicData } = client.storage.from('product-media').getPublicUrl(path);
+      const cover = type === 'image' && !hasCover;
+      if (cover) hasCover = true;
+      rows.push({ product_id: productId, media_type: type, media_url: publicData.publicUrl, display_order: index, is_cover: cover });
+    }
+    if (rows.length) {
+      const { error } = await client.from('product_media').insert(rows);
+      if (error) throw error;
+    }
+  }
+
+  function mediaCount(product) {
+    return Array.isArray(product.product_media) ? product.product_media.length : 0;
+  }
+
+  async function deleteStoredMedia(client, productId) {
+    const { data, error } = await client.from('product_media').select('media_url').eq('product_id', productId);
+    if (error) throw error;
+    const paths = (data || []).map(item => {
+      const marker = '/product-media/';
+      const position = item.media_url.indexOf(marker);
+      return position >= 0 ? item.media_url.slice(position + marker.length) : null;
+    }).filter(Boolean);
+    if (paths.length) {
+      const { error: removeError } = await client.storage.from('product-media').remove(paths);
+      if (removeError) throw removeError;
+    }
+  }
 
   async function renderProducts() {
     const client = await db();
-    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url').order('name');
+    const { data, error } = await client.from('products').select('id,name,category,price,stock,active,image_url,product_media(id)').order('name');
     if (error) { root.innerHTML = '<p>ไม่สามารถโหลดสินค้าได้</p>'; message(error.message); return; }
     root.innerHTML = '';
     if (!data.length) { root.innerHTML = '<p>ยังไม่มีสินค้าในฐานข้อมูล</p>'; return; }
@@ -40,16 +96,18 @@
       row.className = 'order';
       const info = document.createElement('span');
       info.textContent = `${product.name} · ฿${Number(product.price).toLocaleString('th-TH')} · คงเหลือ ${product.stock || 0} ชิ้น${product.active ? '' : ' (ปิดการขาย)'}`;
+      const count = document.createElement('small');
+      count.className = 'product-media-count';
+      count.textContent = `สื่อสินค้า ${mediaCount(product)} ไฟล์${mediaCount(product) ? '' : ' (ยังไม่มีรูปหรือวิดีโอ)'}`;
+      const infoBlock = document.createElement('div');
+      infoBlock.append(info, count);
       const actions = document.createElement('div');
       const stockInput = document.createElement('input');
-      stockInput.type = 'number';
-      stockInput.min = '0';
-      stockInput.value = String(product.stock || 0);
+      stockInput.type = 'number'; stockInput.min = '0'; stockInput.value = String(product.stock || 0);
       stockInput.setAttribute('aria-label', `สต๊อก ${product.name}`);
       stockInput.style.cssText = 'width:76px;padding:6px;margin-right:6px;border:1px solid #d9d4c9;border-radius:8px';
       const saveStock = document.createElement('button');
-      saveStock.className = 'filter';
-      saveStock.textContent = 'บันทึกสต๊อก';
+      saveStock.className = 'filter'; saveStock.textContent = 'บันทึกสต๊อก';
       saveStock.onclick = async () => {
         const stock = Number(stockInput.value);
         if (!Number.isInteger(stock) || stock < 0) { message('กรุณาระบุจำนวนสต๊อกตั้งแต่ 0 ขึ้นไป'); return; }
@@ -57,36 +115,31 @@
         const { error: stockError } = await client.from('products').update({ stock }).eq('id', product.id);
         if (stockError) { message(stockError.message); saveStock.disabled = false; return; }
         message(stock === 0 ? 'บันทึกแล้ว: สินค้าหมดชั่วคราว' : `บันทึกสต๊อก ${stock} ชิ้นแล้ว`);
-        await renderProducts();
-        await catalog.syncStocks();
+        await renderProducts(); await catalog.syncStocks();
       };
       const toggleActive = document.createElement('button');
-      toggleActive.className = 'filter';
-      toggleActive.textContent = product.active ? 'ปิดการขาย' : 'เปิดขาย';
+      toggleActive.className = 'filter'; toggleActive.textContent = product.active ? 'ปิดการขาย' : 'เปิดขาย';
       toggleActive.onclick = async () => {
         toggleActive.disabled = true;
         const { error: activeError } = await client.from('products').update({ active: !product.active }).eq('id', product.id);
         if (activeError) { message(activeError.message); toggleActive.disabled = false; return; }
         message(product.active ? 'ปิดการขายแล้ว' : 'เปิดขายแล้ว');
-        await renderProducts();
-        await catalog.syncStocks();
+        await renderProducts(); await catalog.syncStocks();
       };
-      actions.append(stockInput, saveStock, toggleActive);
       const remove = document.createElement('button');
-      remove.className = 'filter';
-      remove.textContent = 'ลบ';
+      remove.className = 'filter'; remove.textContent = 'ลบ';
       remove.onclick = async () => {
-        if (!confirm(`ลบสินค้า “${product.name}” ออกจากฐานข้อมูลใช่หรือไม่?`)) return;
+        if (!confirm(`ลบสินค้า “${product.name}” พร้อมรูปและวิดีโอออกจากระบบใช่หรือไม่?`)) return;
         remove.disabled = true;
-        const { error: deleteError } = await client.from('products').delete().eq('id', product.id);
-        if (deleteError) { message(deleteError.message); remove.disabled = false; return; }
-        message('ลบสินค้าแล้ว');
-        await renderProducts();
-        await catalog.syncStocks();
+        try {
+          await deleteStoredMedia(client, product.id);
+          const { error: deleteError } = await client.from('products').delete().eq('id', product.id);
+          if (deleteError) throw deleteError;
+          message('ลบสินค้าแล้ว'); await renderProducts(); await catalog.syncStocks();
+        } catch (error) { message(error.message); remove.disabled = false; }
       };
-      actions.append(remove);
-      row.append(info, actions);
-      root.append(row);
+      actions.append(stockInput, saveStock, toggleActive, remove);
+      row.append(infoBlock, actions); root.append(row);
     });
   }
 
@@ -94,29 +147,21 @@
     event.preventDefault();
     const fields = new FormData(form);
     const product = {
-      name: fields.get('name').trim(),
-      slug: slugFor(fields.get('name')),
-      category: fields.get('category'),
-      short_description: fields.get('detail').trim(),
-      description: fields.get('description').trim(),
-      price: Number(fields.get('price')),
-      stock: Number(fields.get('stock')),
-      image_url: imageData || null,
-      active: true
+      name: fields.get('name').trim(), slug: slugFor(fields.get('name')), category: fields.get('category'),
+      short_description: fields.get('detail').trim(), description: fields.get('description').trim(),
+      price: Number(fields.get('price')), stock: Number(fields.get('stock')), image_url: null, active: true
     };
-    message('กำลังบันทึกสินค้า…');
-    const client = await db();
-    const { error } = await client.from('products').insert(product);
-    if (error) { message(error.message); return; }
-    form.reset(); imageData = ''; preview.removeAttribute('src');
-    message('เพิ่มสินค้าในฐานข้อมูลเรียบร้อย');
-    await renderProducts();
-    await catalog.syncStocks();
+    try {
+      message('กำลังบันทึกสินค้าและอัปโหลดสื่อ…');
+      const client = await db();
+      const { data: inserted, error } = await client.from('products').insert(product).select('id').single();
+      if (error) throw error;
+      await uploadMedia(client, inserted.id);
+      form.reset(); mediaFiles = []; showPreviews();
+      message('เพิ่มสินค้าและอัปโหลดสื่อเรียบร้อย');
+      await renderProducts(); await catalog.syncStocks();
+    } catch (error) { message(error.message || 'ไม่สามารถเพิ่มสินค้าได้'); }
   };
 
-  (async () => {
-    await db();
-    const access = await requireRole('admin');
-    if (access) await renderProducts();
-  })();
+  (async () => { await db(); const access = await requireRole('admin'); if (access) await renderProducts(); })();
 }());
