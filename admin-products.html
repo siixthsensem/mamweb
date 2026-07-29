@@ -11,6 +11,10 @@
     .media-preview-list img,.media-preview-list video{display:block;width:100%;height:92px;object-fit:cover;border-radius:6px}
     .media-preview-list figcaption{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px}
     .product-media-count{display:block;font-size:12px;color:#657069;margin-top:4px}
+    .media-modal{position:fixed;inset:0;background:#1e2925a8;z-index:20;padding:24px;display:grid;place-items:center}
+    .media-modal[hidden]{display:none}.media-dialog{width:min(760px,100%);max-height:min(760px,92vh);overflow:auto;background:#fffaf1;border-radius:18px;padding:24px;box-shadow:0 24px 70px #0004}
+    .media-dialog-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}.media-dialog-head h2{margin:0;font-size:24px}
+    .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}.media-card{border:1px solid #ded6c8;border-radius:12px;padding:8px;background:#fffdf8}.media-card img,.media-card video{width:100%;height:155px;display:block;object-fit:cover;border-radius:7px;background:#202522}.media-card video{object-fit:contain}.media-card p{font-size:12px;margin:7px 0;color:#657069}.media-card .media-actions{display:flex;flex-wrap:wrap;gap:6px}.media-card .filter{padding:6px 9px;font-size:12px}.cover-mark{color:#b95f43;font-weight:700}
   </style>
 </head>
 <body>
@@ -48,10 +52,17 @@
       </section>
     </div>
   </main>
+  <div id="media-modal" class="media-modal" hidden role="dialog" aria-modal="true" aria-labelledby="media-modal-title">
+    <div class="media-dialog">
+      <div class="media-dialog-head"><div><span class="eyebrow">media manager</span><h2 id="media-modal-title">จัดการรูปและวิดีโอ</h2></div><button id="close-media-modal" class="filter" type="button">ปิด</button></div>
+      <p id="media-modal-status" class="auth-status" aria-live="polite"></p>
+      <div id="media-manager-list" class="media-grid"></div>
+    </div>
+  </div>
   <script src="supabase-config.js"></script>
   <script type="module" src="supabase-client.js"></script>
   <script src="auth.js?v=3"></script>
   <script src="catalog.js?v=6"></script>
-  <script src="admin-products.js?v=4"></script>
+  <script src="admin-products.js?v=5"></script>
 </body>
 </html>
