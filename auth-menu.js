@@ -1,5 +1,9 @@
 (async()=>{
   try {
+    document.querySelectorAll('a[href="custom-order.html"]').forEach(link => link.remove());
+    document.querySelectorAll('option').forEach(option => {
+      if (option.textContent.trim() === 'สั่งทำพิเศษ') option.remove();
+    });
     for(let attempt=0;attempt<50&&!window.supabaseReady;attempt++){
       await new Promise(resolve=>setTimeout(resolve,50));
     }

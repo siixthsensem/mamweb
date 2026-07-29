@@ -1,4 +1,5 @@
 (function () {
+  document.querySelectorAll('a[href="admin-custom-orders.html"]').forEach(link => link.remove());
   const form = document.getElementById('add-product');
   const picker = form.elements.image;
   const preview = document.getElementById('image-preview');

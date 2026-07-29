@@ -1,4 +1,9 @@
 window.addEventListener('load', async () => {
+  document.querySelectorAll('a[href="admin-custom-orders.html"]').forEach(link => {
+    const panel = link.closest('.panel');
+    if (panel) panel.remove(); else link.remove();
+  });
+  document.getElementById('messages-count')?.closest('.stat')?.remove();
   const session = await requireRole('admin');
   if (!session) return;
 
@@ -57,15 +62,13 @@ window.addEventListener('load', async () => {
   }
 
   async function refreshStats() {
-    const [orders, messages, items, products] = await Promise.all([
+    const [orders, items, products] = await Promise.all([
       db.from('orders').select('*', { count: 'exact', head: true }),
-      db.from('custom_orders').select('*', { count: 'exact', head: true }).eq('status', 'รอการติดต่อ'),
       db.from('order_items').select('quantity,orders(status)'),
       db.from('products').select('*', { count: 'exact', head: true })
     ]);
     document.getElementById('orders-count').textContent = orders.count || 0;
     document.getElementById('products-count').textContent = products.count || 0;
-    document.getElementById('messages-count').textContent = messages.count || 0;
     const list = items.data || [];
     const sum = predicate => list.filter(predicate).reduce((total, item) => total + (Number(item.quantity) || 0), 0);
     document.getElementById('to-ship-count').textContent = sum(item => item.orders?.status === 'processing');
