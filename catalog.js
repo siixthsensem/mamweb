@@ -2,6 +2,15 @@
   const productKey = 'lamunlai-products';
   const cartKey = 'lamunlai-cart';
   const colors = ['sand', 'green', 'beige', 'pink'];
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || link.target || link.hasAttribute('download')) return;
+    const target = new URL(link.href, location.href);
+    if (target.origin !== location.origin || target.pathname === location.pathname || link.getAttribute('href').startsWith('#')) return;
+    event.preventDefault();
+    document.body.classList.add('page-leaving');
+    setTimeout(() => { location.href = target.href; }, 180);
+  });
   const initial = [
     { id: 'tote', name: 'กระเป๋าผ้า Everyday Tote', category: 'กระเป๋าผ้า', detail: 'ผ้าฝ้ายทอมือ · สีดินเผา', description: 'กระเป๋าผ้าทอมือสำหรับทุกวัน', price: 890, stock: 0, color: 'sand', icon: '👜' },
     { id: 'pillow', name: 'ปลอกหมอนลายตาราง', category: 'ของแต่งบ้าน', detail: 'ผ้าฝ้ายธรรมชาติ · Sage green', description: 'ปลอกหมอนผ้าฝ้ายธรรมชาติ', price: 650, stock: 0, color: 'green', icon: '🏠' },

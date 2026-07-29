@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+@keyframes page-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+body{animation:page-arrive .32s ease-out both}.page-leaving{opacity:0!important;transform:translateY(-8px)!important;transition:opacity .18s ease-in,transform .18s ease-in;pointer-events:none}
+@media(prefers-reduced-motion:reduce){body{animation:none}.page-leaving{transition:none}}
 @media(max-width:760px){
   header{padding:14px 16px!important;flex-wrap:wrap!important;gap:10px!important}
   header>.logo{display:flex!important;font-size:20px!important}
