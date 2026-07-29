@@ -28,6 +28,14 @@
   <style>
     .category { min-height: 185px; }
     .c-icon { font-size: 84px !important; margin-bottom: 20px; }
+    @media(max-width:760px) {
+      header { padding:14px 16px !important; flex-wrap:wrap; gap:10px; }
+      header>.logo { display:flex !important; font-size:20px; }
+      header nav { display:flex !important; order:3; width:100%; overflow-x:auto; gap:16px; padding:5px 0; }
+      header nav a { white-space:nowrap; font-size:13px; }
+      .actions { margin-left:auto; }
+      .category { min-height:175px; }.c-icon { font-size:76px !important; }
+    }
   </style>
 </head>
 <body>
