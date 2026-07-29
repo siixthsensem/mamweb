@@ -46,11 +46,13 @@
     message(selected.length ? `เลือกสื่อแล้ว ${selected.length} ไฟล์ — รูปแรกจะเป็นรูปหน้าปกสินค้า` : '');
   };
 
-  async function uploadMedia(client, productId) {
+  async function uploadMedia(client, productId, files = mediaFiles) {
     const rows = [];
-    let hasCover = false;
-    for (let index = 0; index < mediaFiles.length; index += 1) {
-      const file = mediaFiles[index];
+    const { data: existingCovers } = await client.from('product_media')
+      .select('id').eq('product_id', productId).eq('media_type', 'image').eq('is_cover', true).limit(1);
+    let hasCover = Boolean(existingCovers && existingCovers.length);
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
       const type = isVideo(file) ? 'video' : 'image';
       const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
       const path = `products/${productId}/${crypto.randomUUID()}-${safeName}`;
@@ -69,6 +71,10 @@
 
   function mediaCount(product) {
     return Array.isArray(product.product_media) ? product.product_media.length : 0;
+  }
+
+  function validateFiles(files) {
+    return files.find(file => !fileIsAllowed(file) || (!isVideo(file) && file.size > 3 * 1024 * 1024) || (isVideo(file) && file.size > 30 * 1024 * 1024));
   }
 
   async function deleteStoredMedia(client, productId) {
@@ -126,6 +132,25 @@
         message(product.active ? 'ปิดการขายแล้ว' : 'เปิดขายแล้ว');
         await renderProducts(); await catalog.syncStocks();
       };
+      const addMedia = document.createElement('button');
+      addMedia.className = 'filter'; addMedia.textContent = 'เพิ่มรูป/วิดีโอ';
+      const mediaInput = document.createElement('input');
+      mediaInput.type = 'file'; mediaInput.accept = 'image/*,video/mp4,video/webm'; mediaInput.multiple = true;
+      mediaInput.hidden = true;
+      addMedia.onclick = () => mediaInput.click();
+      mediaInput.onchange = async () => {
+        const files = Array.from(mediaInput.files || []);
+        const invalid = validateFiles(files);
+        if (invalid) { message('รองรับรูปภาพไม่เกิน 3 MB และวิดีโอ MP4/WebM ไม่เกิน 30 MB ต่อไฟล์'); return; }
+        if (!files.length) return;
+        addMedia.disabled = true;
+        try {
+          message(`กำลังอัปโหลดสื่อ ${files.length} ไฟล์…`);
+          await uploadMedia(client, product.id, files);
+          message('เพิ่มรูป/วิดีโอสินค้าเรียบร้อย');
+          await renderProducts(); await catalog.syncStocks();
+        } catch (error) { message(error.message || 'อัปโหลดสื่อไม่สำเร็จ'); addMedia.disabled = false; }
+      };
       const remove = document.createElement('button');
       remove.className = 'filter'; remove.textContent = 'ลบ';
       remove.onclick = async () => {
@@ -138,7 +163,7 @@
           message('ลบสินค้าแล้ว'); await renderProducts(); await catalog.syncStocks();
         } catch (error) { message(error.message); remove.disabled = false; }
       };
-      actions.append(stockInput, saveStock, toggleActive, remove);
+      actions.append(stockInput, saveStock, toggleActive, addMedia, mediaInput, remove);
       row.append(infoBlock, actions); root.append(row);
     });
   }

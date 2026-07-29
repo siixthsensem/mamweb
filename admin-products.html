@@ -39,7 +39,7 @@
             <label>รายละเอียดสินค้าแบบเต็ม<textarea required name="description" placeholder="อธิบายขนาด วัสดุ จุดเด่น และวิธีใช้งาน"></textarea></label>
             <label>ราคา (บาท)<input required min="1" type="number" name="price" placeholder="890"></label>
             <label>จำนวนสต๊อกคงเหลือ<input required min="0" type="number" name="stock" value="0"></label>
-            <label>รูปภาพและวิดีโอสินค้า<input type="file" name="media" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" multiple><small>อัปโหลดรูปหลายรูปได้ (ไม่เกิน 3 MB/รูป) และวิดีโอ MP4 หรือ WebM (ไม่เกิน 30 MB/ไฟล์)</small></label>
+            <label>รูปภาพและวิดีโอสินค้า<input type="file" name="media" accept="image/*,video/mp4,video/webm" multiple><small>อัปโหลดรูปหลายรูปได้ (ไม่เกิน 3 MB/รูป) และวิดีโอ MP4 หรือ WebM (ไม่เกิน 30 MB/ไฟล์)</small></label>
             <div id="media-preview" class="media-preview-list" aria-live="polite"></div>
             <button class="btn" type="submit">เพิ่มสินค้า</button>
           </form>
@@ -52,6 +52,6 @@
   <script type="module" src="supabase-client.js"></script>
   <script src="auth.js?v=3"></script>
   <script src="catalog.js?v=6"></script>
-  <script src="admin-products.js?v=3"></script>
+  <script src="admin-products.js?v=4"></script>
 </body>
 </html>

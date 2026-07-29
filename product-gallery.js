@@ -7,10 +7,11 @@
   function displayMedia(art, media, all) {
     art.innerHTML = '';
     art.className = 'detail-art';
+    art.style.cssText = 'position:relative;display:block;aspect-ratio:1 / 1;height:auto;max-height:560px;overflow:hidden;background:#efe5d6';
     const main = document.createElement(media.media_type === 'video' ? 'video' : 'img');
     main.src = media.media_url;
     main.className = 'product-photo';
-    main.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+    main.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:${media.media_type === 'video' ? 'contain' : 'cover'};display:block;background:#1d211f`;
     if (media.media_type === 'video') { main.controls = true; main.playsInline = true; main.preload = 'metadata'; }
     else main.alt = document.getElementById('product-name').textContent || 'รูปสินค้า';
     art.append(main);
@@ -29,7 +30,6 @@
       button.onclick = () => displayMedia(art, item, all);
       thumbs.append(button);
     });
-    art.style.position = 'relative';
     art.append(thumbs);
   }
 
